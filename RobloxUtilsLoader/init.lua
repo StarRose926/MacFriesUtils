@@ -1,8 +1,9 @@
 local Container = Instance.new('Folder')
 Container.Name = 'RobloxUtils'
 
-local requires = {}
 local global_require = function() end
+
+local require_mappings = {}
 
 -- Load Everything 1 by 1, to not crash by loading everything at once.
 local function loadModulesFromBundler(file)
@@ -19,12 +20,12 @@ local function loadModulesFromBundler(file)
             getfenv()[key] = val
         end
     }))
+    local gui, req = fn()
     
     for _, inst in next, gui:GetChildren() do
         inst.Parent = Container
+        require_mappings[inst] = req
     end
-
-    table.insert(requires, req)
 end
 
 loadModulesFromBundler('https://raw.githubusercontent.com/StarRose926/MacFriesUtils/refs/heads/main/RobloxUtilsLoader/LuauPolyfillMini.lua')
@@ -37,15 +38,13 @@ for i = 1, 6 do
 end
 
 global_require = function(module)
-    for _, req in next, requires do
-        if req then
-            local ok, res = pcall(req, module)
-
-            if ok and res then
-                return res
-            end
+    for inst, req in ipairs(require_mappings) do
+        if module:IsDescendantOf(inst) then
+            return req(module)
         end
     end
+
+    return require(module)
 end
 
 return Container, global_require
